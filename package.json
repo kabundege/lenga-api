@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.40.0",
+    "@strapi/plugin-documentation": "^5.40.0",
     "@strapi/plugin-users-permissions": "5.40.0",
     "@strapi/strapi": "5.40.0",
     "better-sqlite3": "12.6.2",
@@ -37,5 +38,6 @@
   "strapi": {
     "uuid": "ff7bfdce-a124-403e-a09f-34ec8172cac1",
     "installId": "42a3ad62361e30b450e9c29eba7717f0a6edacc61b8ad1d9a8f65a297b2d7491"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

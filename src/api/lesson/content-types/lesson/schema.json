@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "lessons",
+  "info": {
+    "singularName": "lesson",
+    "pluralName": "lessons",
+    "displayName": "Lesson"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "text",
+      "required": true
+    },
+    "thumbnail": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "audio_desc": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "audios"
+      ]
+    },
+    "lesson_chapters": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::lesson-chapter.lesson-chapter",
+      "mappedBy": "lesson"
+    },
+    "order": {
+      "type": "integer",
+      "required": true
+    }
+  }
+}

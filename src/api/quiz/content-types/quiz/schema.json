@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "quizzes",
+  "info": {
+    "singularName": "quiz",
+    "pluralName": "quizzes",
+    "displayName": "Quiz"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "qas": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::qa.qa",
+      "mappedBy": "quiz"
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "lesson_chapter": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::lesson-chapter.lesson-chapter",
+      "inversedBy": "quizzes"
+    },
+    "audio_desc": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "audios"
+      ]
+    }
+  }
+}

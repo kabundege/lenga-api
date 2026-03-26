@@ -1,0 +1,30 @@
+{
+  "collectionName": "components_home_components_lesson_cards",
+  "info": {
+    "displayName": "lesson-card"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "text",
+      "required": true
+    },
+    "thumbnail": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "audio_desc": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "audios"
+      ]
+    }
+  },
+  "config": {}
+}
