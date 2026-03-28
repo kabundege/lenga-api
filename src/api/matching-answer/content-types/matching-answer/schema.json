@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "matching_answers",
+  "info": {
+    "singularName": "matching-answer",
+    "pluralName": "matching-answers",
+    "displayName": "Matching answer"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "thumbnail": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "matchings": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::matching.matching",
+      "inversedBy": "matching_answers"
+    },
+    "matching_questions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::matching-question.matching-question",
+      "mappedBy": "matching_answer"
+    }
+  }
+}

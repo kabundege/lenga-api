@@ -1,0 +1,49 @@
+{
+  "kind": "collectionType",
+  "collectionName": "matchings",
+  "info": {
+    "singularName": "matching",
+    "pluralName": "matchings",
+    "displayName": "Matching"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "text",
+      "required": true
+    },
+    "audio_desc": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "audios"
+      ]
+    },
+    "matching_answers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::matching-answer.matching-answer",
+      "mappedBy": "matchings"
+    },
+    "matching_questions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::matching-question.matching-question",
+      "mappedBy": "matching"
+    },
+    "lesson_chapter": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::lesson-chapter.lesson-chapter",
+      "inversedBy": "matchings"
+    },
+    "order": {
+      "type": "integer",
+      "required": true
+    }
+  }
+}

@@ -457,9 +457,8 @@ export interface ApiLessonChapterLessonChapter
       'api::lesson-chapter.lesson-chapter'
     > &
       Schema.Attribute.Private;
-    order: Schema.Attribute.Integer &
-      Schema.Attribute.Required &
-      Schema.Attribute.Unique;
+    matchings: Schema.Attribute.Relation<'oneToMany', 'api::matching.matching'>;
+    order: Schema.Attribute.Integer & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
     quizzes: Schema.Attribute.Relation<'oneToMany', 'api::quiz.quiz'>;
     thumbnail: Schema.Attribute.Media<'images' | 'videos'> &
@@ -531,6 +530,120 @@ export interface ApiLessonLesson extends Struct.CollectionTypeSchema {
     order: Schema.Attribute.Integer & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
     thumbnail: Schema.Attribute.Media<'images'> & Schema.Attribute.Required;
+    title: Schema.Attribute.Text & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMatchingAnswerMatchingAnswer
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'matching_answers';
+  info: {
+    displayName: 'Matching answer';
+    pluralName: 'matching-answers';
+    singularName: 'matching-answer';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::matching-answer.matching-answer'
+    > &
+      Schema.Attribute.Private;
+    matching_questions: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::matching-question.matching-question'
+    >;
+    matchings: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::matching.matching'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    thumbnail: Schema.Attribute.Media<'images'> & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMatchingQuestionMatchingQuestion
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'matching_questions';
+  info: {
+    displayName: 'Matching question';
+    pluralName: 'matching-questions';
+    singularName: 'matching-question';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    audio_desc: Schema.Attribute.Media<'audios'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::matching-question.matching-question'
+    > &
+      Schema.Attribute.Private;
+    matching: Schema.Attribute.Relation<'manyToOne', 'api::matching.matching'>;
+    matching_answer: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::matching-answer.matching-answer'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    thumbnail: Schema.Attribute.Media<'images'> & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMatchingMatching extends Struct.CollectionTypeSchema {
+  collectionName: 'matchings';
+  info: {
+    displayName: 'Matching';
+    pluralName: 'matchings';
+    singularName: 'matching';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    audio_desc: Schema.Attribute.Media<'audios'> & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    lesson_chapter: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::lesson-chapter.lesson-chapter'
+    >;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::matching.matching'
+    > &
+      Schema.Attribute.Private;
+    matching_answers: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::matching-answer.matching-answer'
+    >;
+    matching_questions: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::matching-question.matching-question'
+    >;
+    order: Schema.Attribute.Integer & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
     title: Schema.Attribute.Text & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -1110,6 +1223,9 @@ declare module '@strapi/strapi' {
       'api::lesson-chapter.lesson-chapter': ApiLessonChapterLessonChapter;
       'api::lesson-video.lesson-video': ApiLessonVideoLessonVideo;
       'api::lesson.lesson': ApiLessonLesson;
+      'api::matching-answer.matching-answer': ApiMatchingAnswerMatchingAnswer;
+      'api::matching-question.matching-question': ApiMatchingQuestionMatchingQuestion;
+      'api::matching.matching': ApiMatchingMatching;
       'api::qa.qa': ApiQaQa;
       'api::quiz.quiz': ApiQuizQuiz;
       'plugin::content-releases.release': PluginContentReleasesRelease;

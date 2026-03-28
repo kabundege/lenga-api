@@ -53,7 +53,13 @@
     "order": {
       "type": "integer",
       "required": true,
-      "unique": true
+      "unique": false
+    },
+    "matchings": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::matching.matching",
+      "mappedBy": "lesson_chapter"
     }
   }
 }
