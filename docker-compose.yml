@@ -1,0 +1,37 @@
+services:
+  api:
+    build: .
+    container_name: lenga-api
+    ports:
+      - "1337:1337"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: strapi
+      DATABASE_USERNAME: strapi
+      DATABASE_PASSWORD: strapi
+      DATABASE_SSL: "false"
+    depends_on:
+      - db
+    volumes:
+      - uploads:/app/public/uploads
+
+  db:
+    image: postgres:16-trixie
+    container_name: lenga-db
+    environment:
+      POSTGRES_DB: strapi
+      POSTGRES_USER: strapi
+      POSTGRES_PASSWORD: strapi
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+  uploads:
