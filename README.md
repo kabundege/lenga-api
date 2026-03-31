@@ -40,6 +40,20 @@ Strapi gives you many possible deployment options for your project including [St
 yarn strapi deploy
 ```
 
+### Run with Nginx (Docker Compose)
+
+This project includes an Nginx reverse proxy in `docker-compose.yml`:
+
+- Nginx listens on port `80`
+- Requests are proxied to Strapi at `api:1337`
+- Upload body size is set to `100M` in `nginx/default.conf`
+
+Run:
+
+```
+docker compose up --build -d
+```
+
 ## 📚 Learn more
 
 - [Resource center](https://strapi.io/resource-center) - Strapi resource center.
