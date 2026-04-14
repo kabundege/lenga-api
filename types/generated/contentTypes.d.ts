@@ -701,6 +701,7 @@ export interface ApiQuizQuiz extends Struct.CollectionTypeSchema {
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::quiz.quiz'> &
       Schema.Attribute.Private;
+    order: Schema.Attribute.Integer & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
     qas: Schema.Attribute.Relation<'oneToMany', 'api::qa.qa'>;
     title: Schema.Attribute.String & Schema.Attribute.Required;

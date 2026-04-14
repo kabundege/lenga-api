@@ -34,6 +34,10 @@
       "allowedTypes": [
         "audios"
       ]
+    },
+    "order": {
+      "type": "integer",
+      "required": true
     }
   }
 }
