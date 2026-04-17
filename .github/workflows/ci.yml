@@ -102,11 +102,11 @@ jobs:
       - name: SSH - docker login, replace container
         uses: appleboy/ssh-action@v1.2.5
         env:
+          IMAGE_TAG: ${{ secrets.IMAGE_TAG }}
+          IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+          CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-          IMAGE_NAME: ${{ needs.docker.outputs.image_name }}
-          IMAGE_TAG: ${{ github.sha }}
-          CONTAINER_NAME: ${{ vars.DEPLOY_CONTAINER_NAME || 'lenga-api' }}
           DEPLOY_DOCKER_RUN_EXTRA_ARGS: ${{ vars.DEPLOY_DOCKER_RUN_EXTRA_ARGS }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
