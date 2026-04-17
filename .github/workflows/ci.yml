@@ -124,7 +124,7 @@ jobs:
 
             docker stop "$CONTAINER_NAME" 2>/dev/null || true
             docker rm "$CONTAINER_NAME" 2>/dev/null || true
-            docker run -d --name "$CONTAINER_NAME" --restart unless-stopped ${DEPLOY_DOCKER_RUN_EXTRA_ARGS:-} "${IMAGE_NAME}:${IMAGE_TAG}"
+            docker run -d --name "$CONTAINER_NAME" -p 1337:1337 --restart unless-stopped ${DEPLOY_DOCKER_RUN_EXTRA_ARGS:-} "${IMAGE_NAME}:${IMAGE_TAG}"
 
             # Clean up old images for this repo, keeping only the newly deployed
             # image and the previous one (for rollback)
