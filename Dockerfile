@@ -31,6 +31,8 @@ RUN npm run build
 
 ENV NODE_ENV=production
 
+VOLUME /app/.tmp
+
 EXPOSE 1337
 
 CMD ["npm", "run", "start"]
