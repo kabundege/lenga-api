@@ -42,6 +42,18 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       },
     },
   },
+  upload: {
+    config: {
+      sizeLimit: env.int('UPLOAD_SIZE_LIMIT_BYTES', 512 * 1024 * 1024),
+      breakpoints: {
+        xlarge: 1920,
+        large: 1000,
+        medium: 750,
+        small: 500,
+        xsmall: 64,
+      },
+    },
+  },
 });
 
 export default config;

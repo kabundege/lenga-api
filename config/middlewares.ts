@@ -1,6 +1,6 @@
 import type { Core } from '@strapi/strapi';
 
-const bodySizeMb = 256;
+const bodySizeMb = Number(process.env.BODY_SIZE_LIMIT_MB || 512);
 
 const config: Core.Config.Middlewares = [
   'strapi::logger',
