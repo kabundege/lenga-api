@@ -705,6 +705,8 @@ export interface ApiQuizQuiz extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     qas: Schema.Attribute.Relation<'oneToMany', 'api::qa.qa'>;
     title: Schema.Attribute.String & Schema.Attribute.Required;
+    title_image: Schema.Attribute.Media<'images'>;
+    title_image_audio: Schema.Attribute.Media<'audios'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
