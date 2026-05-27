@@ -34,6 +34,24 @@
       "allowedTypes": [
         "audios"
       ]
+    },
+    "order": {
+      "type": "integer",
+      "required": true
+    },
+    "title_image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "title_image_audio": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "audios"
+      ]
     }
   }
 }
