@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "module_attendances",
+  "info": {
+    "singularName": "module-attendance",
+    "pluralName": "module-attendances",
+    "displayName": "Module attendance"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "required": true
+    },
+    "lesson": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::lesson.lesson",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["started", "completed"],
+      "required": true,
+      "default": "started"
+    },
+    "progress_percentage": {
+      "type": "integer",
+      "required": true,
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    "completed_at": {
+      "type": "datetime"
+    }
+  }
+}

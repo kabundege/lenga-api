@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "extended_profiles",
+  "info": {
+    "singularName": "extended-profile",
+    "pluralName": "extended-profiles",
+    "displayName": "Extended profile"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "extended_profile",
+      "required": true,
+      "unique": true
+    },
+    "gender": {
+      "type": "enumeration",
+      "enum": ["Male", "Female", "Other", "PreferNotToSay"]
+    },
+    "age": {
+      "type": "integer",
+      "min": 0
+    },
+    "is_pwd": {
+      "type": "boolean",
+      "default": false
+    },
+    "cooperative_name": {
+      "type": "string"
+    },
+    "is_cooperative_member": {
+      "type": "boolean",
+      "default": false
+    },
+    "district": {
+      "type": "string"
+    },
+    "sector": {
+      "type": "string"
+    }
+  }
+}

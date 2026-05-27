@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "assessment_submissions",
+  "info": {
+    "singularName": "assessment-submission",
+    "pluralName": "assessment-submissions",
+    "displayName": "Assessment submission"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "required": true
+    },
+    "quiz": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::quiz.quiz"
+    },
+    "matching": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::matching.matching"
+    },
+    "score": {
+      "type": "integer",
+      "required": true,
+      "min": 0
+    },
+    "total_questions": {
+      "type": "integer",
+      "required": true,
+      "min": 1
+    },
+    "is_passed": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    }
+  }
+}

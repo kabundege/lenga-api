@@ -430,6 +430,110 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiAssessmentSubmissionAssessmentSubmission
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'assessment_submissions';
+  info: {
+    displayName: 'Assessment submission';
+    pluralName: 'assessment-submissions';
+    singularName: 'assessment-submission';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    is_passed: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::assessment-submission.assessment-submission'
+    > &
+      Schema.Attribute.Private;
+    matching: Schema.Attribute.Relation<'manyToOne', 'api::matching.matching'>;
+    publishedAt: Schema.Attribute.DateTime;
+    quiz: Schema.Attribute.Relation<'manyToOne', 'api::quiz.quiz'>;
+    score: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      >;
+    total_questions: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    user: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    > &
+      Schema.Attribute.Required;
+  };
+}
+
+export interface ApiExtendedProfileExtendedProfile
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'extended_profiles';
+  info: {
+    displayName: 'Extended profile';
+    pluralName: 'extended-profiles';
+    singularName: 'extended-profile';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    age: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      >;
+    cooperative_name: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    district: Schema.Attribute.String;
+    gender: Schema.Attribute.Enumeration<
+      ['Male', 'Female', 'Other', 'PreferNotToSay']
+    >;
+    is_cooperative_member: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    is_pwd: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::extended-profile.extended-profile'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    sector: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    user: Schema.Attribute.Relation<
+      'oneToOne',
+      'plugin::users-permissions.user'
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+  };
+}
+
 export interface ApiLessonChapterLessonChapter
   extends Struct.CollectionTypeSchema {
   collectionName: 'lesson_chapters';
@@ -648,6 +752,55 @@ export interface ApiMatchingMatching extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+  };
+}
+
+export interface ApiModuleAttendanceModuleAttendance
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'module_attendances';
+  info: {
+    displayName: 'Module attendance';
+    pluralName: 'module-attendances';
+    singularName: 'module-attendance';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    completed_at: Schema.Attribute.DateTime;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    lesson: Schema.Attribute.Relation<'manyToOne', 'api::lesson.lesson'> &
+      Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::module-attendance.module-attendance'
+    > &
+      Schema.Attribute.Private;
+    progress_percentage: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
+    publishedAt: Schema.Attribute.DateTime;
+    status: Schema.Attribute.Enumeration<['started', 'completed']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'started'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    user: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    > &
+      Schema.Attribute.Required;
   };
 }
 
@@ -1182,6 +1335,10 @@ export interface PluginUsersPermissionsUser
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    extended_profile: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::extended-profile.extended-profile'
+    >;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1223,12 +1380,15 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::assessment-submission.assessment-submission': ApiAssessmentSubmissionAssessmentSubmission;
+      'api::extended-profile.extended-profile': ApiExtendedProfileExtendedProfile;
       'api::lesson-chapter.lesson-chapter': ApiLessonChapterLessonChapter;
       'api::lesson-video.lesson-video': ApiLessonVideoLessonVideo;
       'api::lesson.lesson': ApiLessonLesson;
       'api::matching-answer.matching-answer': ApiMatchingAnswerMatchingAnswer;
       'api::matching-question.matching-question': ApiMatchingQuestionMatchingQuestion;
       'api::matching.matching': ApiMatchingMatching;
+      'api::module-attendance.module-attendance': ApiModuleAttendanceModuleAttendance;
       'api::qa.qa': ApiQaQa;
       'api::quiz.quiz': ApiQuizQuiz;
       'plugin::content-releases.release': PluginContentReleasesRelease;

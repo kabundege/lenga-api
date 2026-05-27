@@ -65,6 +65,13 @@
       "target": "plugin::users-permissions.role",
       "inversedBy": "users",
       "configurable": false
+    },
+    "extended_profile": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::extended-profile.extended-profile",
+      "mappedBy": "user",
+      "configurable": false
     }
   }
 }
