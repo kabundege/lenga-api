@@ -25,15 +25,27 @@ export const ANALYTICS_TABLES = {
   matchings: 'matchings',
 } as const;
 
-/** Strapi join-table link field suffixes for manyToOne relations. */
-export const ANALYTICS_LINK_FIELDS = {
-  extendedProfileUser: 'user_id',
-  moduleAttendanceUser: 'user_id',
-  moduleAttendanceLesson: 'lesson_id',
-  assessmentSubmissionUser: 'user_id',
-  assessmentSubmissionQuiz: 'quiz_id',
-  assessmentSubmissionMatching: 'matching_id',
+/**
+ * Strapi v5 relation link tables (`*_lnk`).
+ * Relations are not stored as inline FK columns on collection tables.
+ */
+export const ANALYTICS_LINK_TABLES = {
+  extendedProfileUser: 'extended_profiles_user_lnk',
+  moduleAttendanceUser: 'module_attendances_user_lnk',
+  moduleAttendanceLesson: 'module_attendances_lesson_lnk',
+  assessmentSubmissionUser: 'assessment_submissions_user_lnk',
+  assessmentSubmissionQuiz: 'assessment_submissions_quiz_lnk',
+  assessmentSubmissionMatching: 'assessment_submissions_matching_lnk',
 } as const;
+
+/** Valid `:type` path segments for `/api/analytics/export/:type`. */
+export type AnalyticsExportType = 'demographics' | 'attendance' | 'assessments';
+
+export const ANALYTICS_EXPORT_TYPES: AnalyticsExportType[] = [
+  'demographics',
+  'attendance',
+  'assessments',
+];
 
 export interface ExtendedProfileAttributes {
   gender?: Gender | null;

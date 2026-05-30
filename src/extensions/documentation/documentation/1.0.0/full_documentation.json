@@ -13,7 +13,7 @@
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "x-generation-date": "2026-05-27T09:45:06.352Z"
+    "x-generation-date": "2026-05-30T10:39:47.534Z"
   },
   "x-strapi-config": {
     "plugins": [
@@ -453,7 +453,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -544,7 +544,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -966,7 +966,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -1057,7 +1057,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -1479,7 +1479,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -1570,7 +1570,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -1992,7 +1992,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -2083,7 +2083,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -2505,7 +2505,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -2596,7 +2596,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -3018,7 +3018,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -3109,7 +3109,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -3531,7 +3531,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -3622,7 +3622,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -4044,7 +4044,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -4135,7 +4135,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -4557,7 +4557,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -4648,7 +4648,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -5070,7 +5070,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -5161,7 +5161,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -5583,7 +5583,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
@@ -5674,7 +5674,7 @@
             "deprecated": false,
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "number"
             }
           }
         ],
