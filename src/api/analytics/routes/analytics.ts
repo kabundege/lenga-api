@@ -39,6 +39,26 @@ export default {
     },
     {
       method: 'GET',
+      path: '/analytics/assessments/passed-learners',
+      handler: 'analytics.getPassedLearners',
+      config: {
+        auth: false,
+        policies: ['global::is-admin-authenticated'],
+        middlewares: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/analytics/attendance/completed-learners',
+      handler: 'analytics.getCompletedLearners',
+      config: {
+        auth: false,
+        policies: ['global::is-admin-authenticated'],
+        middlewares: [],
+      },
+    },
+    {
+      method: 'GET',
       path: '/analytics/export/:type',
       handler: 'analytics.exportToExcel',
       config: {

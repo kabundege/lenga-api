@@ -16,6 +16,11 @@ import {
 const isExportType = (value: string): value is AnalyticsExportType =>
   ANALYTICS_EXPORT_TYPES.includes(value as AnalyticsExportType);
 
+const parseLearnerListParams = (query: Record<string, unknown>) => ({
+  limit: query.limit != null ? Number(query.limit) : undefined,
+  offset: query.offset != null ? Number(query.offset) : undefined,
+});
+
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   /**
    * GET /api/analytics/demographics
@@ -38,6 +43,24 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
    */
   async getAssessments(ctx) {
     const data = await strapi.service('api::analytics.analytics').getAssessments();
+    ctx.body = { data };
+  },
+
+  /**
+   * GET /api/analytics/assessments/passed-learners
+   */
+  async getPassedLearners(ctx) {
+    const params = parseLearnerListParams(ctx.query as Record<string, unknown>);
+    const data = await strapi.service('api::analytics.analytics').getPassedLearners(params);
+    ctx.body = { data };
+  },
+
+  /**
+   * GET /api/analytics/attendance/completed-learners
+   */
+  async getCompletedLearners(ctx) {
+    const params = parseLearnerListParams(ctx.query as Record<string, unknown>);
+    const data = await strapi.service('api::analytics.analytics').getCompletedLearners(params);
     ctx.body = { data };
   },
 

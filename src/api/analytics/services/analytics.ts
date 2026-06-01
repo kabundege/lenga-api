@@ -11,9 +11,13 @@ import {
   ANALYTICS_LINK_TABLES,
   ANALYTICS_TABLES,
   type AnalyticsExportType,
+  type AnalyticsLearnerListParams,
+  type AnalyticsLearnerListResult,
+  type AnalyticsLearnerRow,
 } from '../../../types/analytics-collections';
 
 type CountRow = { count: string | number | null };
+type DistinctCountRow = { total: string | number | null };
 
 const toNumber = (value: unknown): number => Number(value ?? 0);
 
@@ -33,6 +37,63 @@ const AGE_BRACKET_SQL = `CASE
   WHEN ep.age <= 54 THEN '45_54'
   ELSE '55_plus'
 END`;
+
+const AGE_BRACKET_SQL_PLAIN = AGE_BRACKET_SQL.replace(/ep\./g, '');
+
+const AGE_BRACKET_ORDER = [
+  'under_18',
+  '18_24',
+  '25_34',
+  '35_44',
+  '45_54',
+  '55_plus',
+  'unknown',
+] as const;
+
+const sortByAgeBracket = <T extends { age_bracket: string }>(rows: T[]): T[] =>
+  [...rows].sort(
+    (a, b) =>
+      AGE_BRACKET_ORDER.indexOf(a.age_bracket as (typeof AGE_BRACKET_ORDER)[number]) -
+      AGE_BRACKET_ORDER.indexOf(b.age_bracket as (typeof AGE_BRACKET_ORDER)[number]),
+  );
+
+const DEFAULT_LEARNER_LIMIT = 50;
+const MAX_LEARNER_LIMIT = 200;
+
+const normalizePagination = (params: AnalyticsLearnerListParams = {}) => {
+  const rawLimit = params.limit ?? DEFAULT_LEARNER_LIMIT;
+  const limit = Math.min(Math.max(Number(rawLimit) || DEFAULT_LEARNER_LIMIT, 1), MAX_LEARNER_LIMIT);
+  const offset = Math.max(Number(params.offset) || 0, 0);
+  return { limit, offset };
+};
+
+const mapLearnerRow = (
+  row: Record<string, unknown>,
+  countField: 'passed_count' | 'completed_lesson_count',
+): AnalyticsLearnerRow => ({
+  user_id: toNumber(row.user_id),
+  username: String(row.username ?? ''),
+  gender: (row.gender as AnalyticsLearnerRow['gender']) ?? null,
+  age: row.age != null && row.age !== '' ? toNumber(row.age) : null,
+  district: row.district != null ? String(row.district) : null,
+  sector: row.sector != null ? String(row.sector) : null,
+  is_pwd: normalizeBoolean(row.is_pwd),
+  is_cooperative_member: normalizeBoolean(row.is_cooperative_member),
+  cooperative_name: row.cooperative_name != null ? String(row.cooperative_name) : null,
+  [countField]: toNumber(row[countField]),
+});
+
+const learnerProfileSelect = [
+  'u.id as user_id',
+  'u.username',
+  'ep.gender',
+  'ep.age',
+  'ep.district',
+  'ep.sector',
+  'ep.is_pwd',
+  'ep.is_cooperative_member',
+  'ep.cooperative_name',
+] as const;
 
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   /**
@@ -63,6 +124,31 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       .groupBy('district', 'sector')
       .orderBy('count', 'desc');
 
+    const ageRaw = (await knex(ANALYTICS_TABLES.extendedProfiles)
+      .select(knex.raw(`${AGE_BRACKET_SQL_PLAIN} as age_bracket`))
+      .count({ count: '*' })
+      .groupByRaw(AGE_BRACKET_SQL_PLAIN)) as Array<{
+      age_bracket: string;
+      count: string | number | null;
+    }>;
+
+    const pwdRaw = await knex(ANALYTICS_TABLES.extendedProfiles)
+      .select('is_pwd')
+      .count({ count: '*' })
+      .groupBy('is_pwd')
+      .orderBy('count', 'desc');
+
+    const avgAgeRow = (await knex(ANALYTICS_TABLES.extendedProfiles)
+      .whereNotNull('age')
+      .avg({ average_age: 'age' })
+      .first()) as { average_age: string | number | null } | undefined;
+
+    const averageAgeRaw = avgAgeRow?.average_age;
+    const averageAge =
+      averageAgeRaw != null && averageAgeRaw !== ''
+        ? Number(Number(averageAgeRaw).toFixed(1))
+        : null;
+
     const withPercentage = (count: number) => ({
       count,
       percentage: total > 0 ? Number(((count / total) * 100).toFixed(2)) : 0,
@@ -70,6 +156,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
     return {
       total,
+      average_age: averageAge,
       gender: genderRaw.map((row) => ({
         gender: row.gender ?? 'unknown',
         ...withPercentage(toNumber(row.count)),
@@ -82,6 +169,16 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       location: locationRaw.map((row) => ({
         district: row.district ?? 'unknown',
         sector: row.sector ?? 'unknown',
+        ...withPercentage(toNumber(row.count)),
+      })),
+      age: sortByAgeBracket(
+        ageRaw.map((row) => ({
+          age_bracket: row.age_bracket ?? 'unknown',
+          ...withPercentage(toNumber(row.count)),
+        })),
+      ),
+      pwd: pwdRaw.map((row) => ({
+        is_pwd: normalizeBoolean(row.is_pwd),
         ...withPercentage(toNumber(row.count)),
       })),
     };
@@ -230,6 +327,114 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   },
 
   /**
+   * Distinct learners with at least one passing assessment submission.
+   */
+  async getPassedLearners(
+    params: AnalyticsLearnerListParams = {},
+  ): Promise<AnalyticsLearnerListResult> {
+    const knex = strapi.db.connection;
+    const { limit, offset } = normalizePagination(params);
+
+    const baseQuery = () =>
+      knex(`${ANALYTICS_TABLES.assessmentSubmissions} as sub`)
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.assessmentSubmissionUser} as su`,
+          'su.assessment_submission_id',
+          'sub.id',
+        )
+        .innerJoin(`${ANALYTICS_TABLES.users} as u`, 'u.id', 'su.user_id')
+        .leftJoin(
+          `${ANALYTICS_LINK_TABLES.extendedProfileUser} as epu`,
+          'epu.user_id',
+          'u.id',
+        )
+        .leftJoin(`${ANALYTICS_TABLES.extendedProfiles} as ep`, 'ep.id', 'epu.extended_profile_id')
+        .where('sub.is_passed', true);
+
+    const totalRow = (await baseQuery()
+      .countDistinct({ total: 'u.id' })
+      .first()) as DistinctCountRow | undefined;
+    const total = toNumber(totalRow?.total);
+
+    const rows = await baseQuery()
+      .select([...learnerProfileSelect])
+      .select(knex.raw('COUNT(DISTINCT sub.id) as passed_count'))
+      .groupBy(
+        'u.id',
+        'u.username',
+        'ep.gender',
+        'ep.age',
+        'ep.district',
+        'ep.sector',
+        'ep.is_pwd',
+        'ep.is_cooperative_member',
+        'ep.cooperative_name',
+      )
+      .orderBy('u.username', 'asc')
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      total,
+      learners: rows.map((row) => mapLearnerRow(row, 'passed_count')),
+    };
+  },
+
+  /**
+   * Distinct learners with at least one completed module attendance record.
+   */
+  async getCompletedLearners(
+    params: AnalyticsLearnerListParams = {},
+  ): Promise<AnalyticsLearnerListResult> {
+    const knex = strapi.db.connection;
+    const { limit, offset } = normalizePagination(params);
+
+    const baseQuery = () =>
+      knex(`${ANALYTICS_TABLES.moduleAttendances} as ma`)
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.moduleAttendanceUser} as mu`,
+          'mu.module_attendance_id',
+          'ma.id',
+        )
+        .innerJoin(`${ANALYTICS_TABLES.users} as u`, 'u.id', 'mu.user_id')
+        .leftJoin(
+          `${ANALYTICS_LINK_TABLES.extendedProfileUser} as epu`,
+          'epu.user_id',
+          'u.id',
+        )
+        .leftJoin(`${ANALYTICS_TABLES.extendedProfiles} as ep`, 'ep.id', 'epu.extended_profile_id')
+        .where('ma.status', 'completed');
+
+    const totalRow = (await baseQuery()
+      .countDistinct({ total: 'u.id' })
+      .first()) as DistinctCountRow | undefined;
+    const total = toNumber(totalRow?.total);
+
+    const rows = await baseQuery()
+      .select([...learnerProfileSelect])
+      .select(knex.raw('COUNT(DISTINCT ma.id) as completed_lesson_count'))
+      .groupBy(
+        'u.id',
+        'u.username',
+        'ep.gender',
+        'ep.age',
+        'ep.district',
+        'ep.sector',
+        'ep.is_pwd',
+        'ep.is_cooperative_member',
+        'ep.cooperative_name',
+      )
+      .orderBy('u.username', 'asc')
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      total,
+      learners: rows.map((row) => mapLearnerRow(row, 'completed_lesson_count')),
+    };
+  },
+
+  /**
    * Flattens analytics payloads into tabular rows for Excel export.
    */
   async getExportRows(type: AnalyticsExportType) {
@@ -240,6 +445,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         ...demographics.gender.map((row) => ({ section: 'gender', ...row })),
         ...demographics.cooperative.map((row) => ({ section: 'cooperative', ...row })),
         ...demographics.location.map((row) => ({ section: 'location', ...row })),
+        ...demographics.age.map((row) => ({ section: 'age', ...row })),
+        ...demographics.pwd.map((row) => ({ section: 'pwd', ...row })),
       ];
     }
 

@@ -69,6 +69,31 @@ export interface AssessmentSubmissionAttributes {
   is_passed: boolean;
 }
 
+/** Learner row returned by passed/completed drill-down analytics endpoints. */
+export interface AnalyticsLearnerRow {
+  user_id: number;
+  username: string;
+  gender: Gender | string | null;
+  age: number | null;
+  district: string | null;
+  sector: string | null;
+  is_pwd: boolean | null;
+  is_cooperative_member: boolean | null;
+  cooperative_name: string | null;
+  passed_count?: number;
+  completed_lesson_count?: number;
+}
+
+export interface AnalyticsLearnerListResult {
+  total: number;
+  learners: AnalyticsLearnerRow[];
+}
+
+export interface AnalyticsLearnerListParams {
+  limit?: number;
+  offset?: number;
+}
+
 /** Maps a numeric age to a bracket label for assessment demographic matrices. */
 export const getAgeBracket = (age: number | null | undefined): AgeBracket => {
   if (age == null || Number.isNaN(age)) return 'unknown';
