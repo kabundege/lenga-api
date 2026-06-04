@@ -53,6 +53,13 @@ export interface CompletedLessonSummary {
   lesson_title: string | null;
 }
 
+export interface PassedAssessmentSummary {
+  assessment_type: 'quiz' | 'matching';
+  assessment_id: number;
+  assessment_order: number | null;
+  assessment_title: string | null;
+}
+
 export interface ExtendedProfileAttributes {
   full_name?: string | null;
   gender?: Gender | null;
@@ -91,6 +98,7 @@ export interface AnalyticsLearnerRow {
   passed_count?: number;
   completed_lesson_count?: number;
   completed_lessons?: CompletedLessonSummary[];
+  passed_assessments?: PassedAssessmentSummary[];
 }
 
 export interface AnalyticsLearnerListResult {
@@ -105,6 +113,11 @@ export interface AnalyticsLearnerListParams {
   lesson_id?: number;
   /** When set with lesson_id, matches any lesson row sharing this CMS order (duplicate lesson ids). */
   lesson_order?: number;
+  /** When set, only learners who passed this quiz or matching exercise. */
+  assessment_type?: 'quiz' | 'matching';
+  assessment_id?: number;
+  /** When set with assessment_id, matches any row sharing this CMS order (duplicate ids). */
+  assessment_order?: number;
 }
 
 /** Maps a numeric age to a bracket label for assessment demographic matrices. */

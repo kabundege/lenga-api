@@ -29,6 +29,19 @@ const parseLearnerListParams = (query: Record<string, unknown>) => {
   const lessonId = rawLessonId != null ? Number(rawLessonId) : undefined;
   const lessonOrder = rawLessonOrder != null ? Number(rawLessonOrder) : undefined;
 
+  const rawAssessmentType =
+    normalizeQueryScalar(query.assessment_type) ?? normalizeQueryScalar(query.assessmentType);
+  const assessmentType =
+    rawAssessmentType === 'quiz' || rawAssessmentType === 'matching'
+      ? rawAssessmentType
+      : undefined;
+  const rawAssessmentId =
+    normalizeQueryScalar(query.assessment_id) ?? normalizeQueryScalar(query.assessmentId);
+  const rawAssessmentOrder =
+    normalizeQueryScalar(query.assessment_order) ?? normalizeQueryScalar(query.assessmentOrder);
+  const assessmentId = rawAssessmentId != null ? Number(rawAssessmentId) : undefined;
+  const assessmentOrder = rawAssessmentOrder != null ? Number(rawAssessmentOrder) : undefined;
+
   return {
     limit: query.limit != null ? Number(query.limit) : undefined,
     offset: query.offset != null ? Number(query.offset) : undefined,
@@ -37,6 +50,15 @@ const parseLearnerListParams = (query: Record<string, unknown>) => {
     lesson_order:
       lessonOrder != null && Number.isInteger(lessonOrder) && lessonOrder > 0
         ? lessonOrder
+        : undefined,
+    assessment_type: assessmentType,
+    assessment_id:
+      assessmentId != null && Number.isInteger(assessmentId) && assessmentId > 0
+        ? assessmentId
+        : undefined,
+    assessment_order:
+      assessmentOrder != null && Number.isInteger(assessmentOrder) && assessmentOrder > 0
+        ? assessmentOrder
         : undefined,
   };
 };

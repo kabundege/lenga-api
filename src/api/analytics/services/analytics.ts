@@ -15,6 +15,7 @@ import {
   type AnalyticsLearnerListResult,
   type AnalyticsLearnerRow,
   type CompletedLessonSummary,
+  type PassedAssessmentSummary,
 } from '../../../types/analytics-collections';
 
 type CountRow = { count: string | number | null };
@@ -127,6 +128,34 @@ const sortCompletedLessons = (lessons: CompletedLessonSummary[]): CompletedLesso
     const orderB = b.lesson_order ?? Number.MAX_SAFE_INTEGER;
     if (orderA !== orderB) return orderA - orderB;
     return a.lesson_id - b.lesson_id;
+  });
+
+const mapPassedLearnerRow = (
+  row: Record<string, unknown>,
+  passedAssessments: PassedAssessmentSummary[],
+): AnalyticsLearnerRow => {
+  const profile = mapLearnerProfileFields(row);
+
+  return {
+    ...profile,
+    display_name: deriveLearnerDisplayName(row.full_name, row.email, profile.username),
+    passed_assessments: passedAssessments,
+  };
+};
+
+const assessmentTypeOrder = (type: PassedAssessmentSummary['assessment_type']) =>
+  type === 'quiz' ? 0 : 1;
+
+const sortPassedAssessments = (
+  assessments: PassedAssessmentSummary[],
+): PassedAssessmentSummary[] =>
+  [...assessments].sort((a, b) => {
+    const typeDelta = assessmentTypeOrder(a.assessment_type) - assessmentTypeOrder(b.assessment_type);
+    if (typeDelta !== 0) return typeDelta;
+    const orderA = a.assessment_order ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.assessment_order ?? Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.assessment_id - b.assessment_id;
   });
 
 const learnerProfileSelect = [
@@ -396,9 +425,32 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   ): Promise<AnalyticsLearnerListResult> {
     const knex = strapi.db.connection;
     const { limit, offset } = normalizePagination(params);
+    const assessmentType = params.assessment_type;
+    const assessmentId = params.assessment_id;
+    const assessmentOrder = params.assessment_order;
 
-    const baseQuery = () =>
-      knex(`${ANALYTICS_TABLES.assessmentSubmissions} as sub`)
+    const resolveFilteredAssessmentIds = async (): Promise<{
+      type: 'quiz' | 'matching';
+      ids: number[];
+    } | null> => {
+      if (assessmentType == null || assessmentId == null) return null;
+
+      const table =
+        assessmentType === 'quiz' ? ANALYTICS_TABLES.quizzes : ANALYTICS_TABLES.matchings;
+
+      if (assessmentOrder != null) {
+        const rows = await knex(table).whereRaw('"order" = ?', [assessmentOrder]).select('id');
+        const ids = rows.map((row) => toNumber(row.id)).filter((id) => id > 0);
+        return { type: assessmentType, ids: ids.length > 0 ? ids : [assessmentId] };
+      }
+
+      return { type: assessmentType, ids: [assessmentId] };
+    };
+
+    const filteredAssessment = await resolveFilteredAssessmentIds();
+
+    const baseQuery = () => {
+      let query = knex(`${ANALYTICS_TABLES.assessmentSubmissions} as sub`)
         .innerJoin(
           `${ANALYTICS_LINK_TABLES.assessmentSubmissionUser} as su`,
           'su.assessment_submission_id',
@@ -413,22 +465,146 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         .leftJoin(`${ANALYTICS_TABLES.extendedProfiles} as ep`, 'ep.id', 'epu.extended_profile_id')
         .where('sub.is_passed', true);
 
+      if (filteredAssessment != null) {
+        const linkTable =
+          filteredAssessment.type === 'quiz'
+            ? ANALYTICS_LINK_TABLES.assessmentSubmissionQuiz
+            : ANALYTICS_LINK_TABLES.assessmentSubmissionMatching;
+        const idColumn = filteredAssessment.type === 'quiz' ? 'quiz_id' : 'matching_id';
+
+        query = query.whereExists(
+          knex(`${linkTable} as af`)
+            .select(knex.raw('1'))
+            .whereRaw('af.assessment_submission_id = sub.id')
+            .whereIn(`af.${idColumn}`, filteredAssessment.ids),
+        );
+      }
+
+      return query;
+    };
+
     const totalRow = (await baseQuery()
       .countDistinct({ total: 'u.id' })
       .first()) as DistinctCountRow | undefined;
     const total = toNumber(totalRow?.total);
 
-    const rows = await baseQuery()
+    const rows = (await baseQuery()
       .select([...learnerProfileSelect])
-      .select(knex.raw('COUNT(DISTINCT sub.id) as passed_count'))
       .groupBy([...learnerProfileGroupBy])
       .orderBy('u.username', 'asc')
       .limit(limit)
-      .offset(offset);
+      .offset(offset)) as Record<string, unknown>[];
+
+    const userIds = rows.map((row) => toNumber(row.user_id));
+    const assessmentsByUser = new Map<number, PassedAssessmentSummary[]>();
+
+    const appendAssessmentRows = (
+      assessmentRows: Array<Record<string, unknown>>,
+      type: PassedAssessmentSummary['assessment_type'],
+    ) => {
+      for (const row of assessmentRows) {
+        const userId = toNumber(row.user_id);
+        const assessment: PassedAssessmentSummary = {
+          assessment_type: type,
+          assessment_id: toNumber(row.assessment_id),
+          assessment_order:
+            row.assessment_order != null && row.assessment_order !== ''
+              ? toNumber(row.assessment_order)
+              : null,
+          assessment_title: row.assessment_title != null ? String(row.assessment_title) : null,
+        };
+
+        const existing = assessmentsByUser.get(userId) ?? [];
+        const alreadyListed = existing.some(
+          (item) =>
+            item.assessment_type === assessment.assessment_type &&
+            item.assessment_id === assessment.assessment_id,
+        );
+        if (!alreadyListed) {
+          existing.push(assessment);
+          assessmentsByUser.set(userId, existing);
+        }
+      }
+    };
+
+    if (userIds.length > 0) {
+      const includeQuiz =
+        filteredAssessment == null || filteredAssessment.type === 'quiz';
+      const includeMatching =
+        filteredAssessment == null || filteredAssessment.type === 'matching';
+
+      const quizRows = includeQuiz
+        ? await knex(`${ANALYTICS_TABLES.assessmentSubmissions} as sub`)
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.assessmentSubmissionUser} as su`,
+          'su.assessment_submission_id',
+          'sub.id',
+        )
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.assessmentSubmissionQuiz} as sq`,
+          'sq.assessment_submission_id',
+          'sub.id',
+        )
+        .innerJoin(`${ANALYTICS_TABLES.quizzes} as q`, 'q.id', 'sq.quiz_id')
+        .where('sub.is_passed', true)
+        .whereIn('su.user_id', userIds)
+        .modify((qb) => {
+          if (filteredAssessment?.type === 'quiz') {
+            qb.whereIn('sq.quiz_id', filteredAssessment.ids);
+          }
+        })
+        .select(
+          'su.user_id',
+          'sq.quiz_id as assessment_id',
+          'q.title as assessment_title',
+          knex.raw('q."order" as assessment_order'),
+        )
+        .groupBy('su.user_id', 'sq.quiz_id', 'q.title', knex.raw('q."order"'))
+        : [];
+
+      appendAssessmentRows(quizRows, 'quiz');
+
+      const matchingRows = includeMatching
+        ? await knex(`${ANALYTICS_TABLES.assessmentSubmissions} as sub`)
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.assessmentSubmissionUser} as su`,
+          'su.assessment_submission_id',
+          'sub.id',
+        )
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.assessmentSubmissionMatching} as sm`,
+          'sm.assessment_submission_id',
+          'sub.id',
+        )
+        .innerJoin(`${ANALYTICS_TABLES.matchings} as m`, 'm.id', 'sm.matching_id')
+        .where('sub.is_passed', true)
+        .whereIn('su.user_id', userIds)
+        .modify((qb) => {
+          if (filteredAssessment?.type === 'matching') {
+            qb.whereIn('sm.matching_id', filteredAssessment.ids);
+          }
+        })
+        .select(
+          'su.user_id',
+          'sm.matching_id as assessment_id',
+          'm.title as assessment_title',
+          knex.raw('m."order" as assessment_order'),
+        )
+        .groupBy('su.user_id', 'sm.matching_id', 'm.title', knex.raw('m."order"'))
+        : [];
+
+      appendAssessmentRows(matchingRows, 'matching');
+
+      for (const [userId, assessments] of assessmentsByUser) {
+        assessmentsByUser.set(userId, sortPassedAssessments(assessments));
+      }
+    }
 
     return {
       total,
-      learners: rows.map((row) => mapLearnerRow(row, 'passed_count')),
+      learners: rows.map((row) =>
+        mapPassedLearnerRow(row, assessmentsByUser.get(toNumber(row.user_id)) ?? []),
+      ),
     };
   },
 
