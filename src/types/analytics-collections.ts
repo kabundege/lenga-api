@@ -122,7 +122,6 @@ export interface LearnerListDemographics {
 export interface AnalyticsLearnerListResult {
   total: number;
   learners: AnalyticsLearnerRow[];
-  /** Populated when the list is scoped by a course/assessment filter. */
   demographics?: LearnerListDemographics;
 }
 
@@ -138,6 +137,8 @@ export interface AnalyticsLearnerListParams {
   assessment_id?: number;
   /** When set with assessment_id, matches any row sharing this CMS order (duplicate ids). */
   assessment_order?: number;
+  /** When true, return total + demographics only (no learner rows). */
+  summary_only?: boolean;
 }
 
 /** Maps a numeric age to a bracket label for assessment demographic matrices. */

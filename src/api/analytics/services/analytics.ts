@@ -569,6 +569,11 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       .countDistinct({ total: 'u.id' })
       .first()) as DistinctCountRow | undefined;
     const total = toNumber(totalRow?.total);
+    const demographics = await computeLearnerListDemographics(baseQuery);
+
+    if (params.summary_only) {
+      return { total, learners: [], demographics };
+    }
 
     const rows = (await baseQuery()
       .select([...learnerProfileSelect])
@@ -682,11 +687,6 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       }
     }
 
-    const demographics =
-      filteredAssessment != null
-        ? await computeLearnerListDemographics(baseQuery)
-        : undefined;
-
     return {
       total,
       learners: rows.map((row) =>
@@ -755,6 +755,11 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       .countDistinct({ total: 'u.id' })
       .first()) as DistinctCountRow | undefined;
     const total = toNumber(totalRow?.total);
+    const demographics = await computeLearnerListDemographics(baseQuery);
+
+    if (params.summary_only) {
+      return { total, learners: [], demographics };
+    }
 
     const rows = (await baseQuery()
       .select([...learnerProfileSelect])
@@ -812,11 +817,6 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         lessonsByUser.set(userId, sortCompletedLessons(lessons));
       }
     }
-
-    const demographics =
-      filteredLessonIds != null
-        ? await computeLearnerListDemographics(baseQuery)
-        : undefined;
 
     return {
       total,

@@ -41,6 +41,10 @@ const parseLearnerListParams = (query: Record<string, unknown>) => {
     normalizeQueryScalar(query.assessment_order) ?? normalizeQueryScalar(query.assessmentOrder);
   const assessmentId = rawAssessmentId != null ? Number(rawAssessmentId) : undefined;
   const assessmentOrder = rawAssessmentOrder != null ? Number(rawAssessmentOrder) : undefined;
+  const rawSummaryOnly =
+    normalizeQueryScalar(query.summary_only) ?? normalizeQueryScalar(query.summaryOnly);
+  const summaryOnly =
+    rawSummaryOnly === 'true' || rawSummaryOnly === '1' || rawSummaryOnly === 'yes';
 
   return {
     limit: query.limit != null ? Number(query.limit) : undefined,
@@ -60,6 +64,7 @@ const parseLearnerListParams = (query: Record<string, unknown>) => {
       assessmentOrder != null && Number.isInteger(assessmentOrder) && assessmentOrder > 0
         ? assessmentOrder
         : undefined,
+    summary_only: summaryOnly || undefined,
   };
 };
 
