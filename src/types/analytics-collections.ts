@@ -101,9 +101,29 @@ export interface AnalyticsLearnerRow {
   passed_assessments?: PassedAssessmentSummary[];
 }
 
+export interface LearnerListDemographicSlice {
+  count: number;
+  percentage: number;
+}
+
+export interface LearnerListDemographics {
+  total: number;
+  average_age: number | null;
+  female: LearnerListDemographicSlice;
+  pwd: LearnerListDemographicSlice;
+  cooperative: LearnerListDemographicSlice;
+  top_district: {
+    district: string;
+    count: number;
+    percentage: number;
+  } | null;
+}
+
 export interface AnalyticsLearnerListResult {
   total: number;
   learners: AnalyticsLearnerRow[];
+  /** Populated when the list is scoped by a course/assessment filter. */
+  demographics?: LearnerListDemographics;
 }
 
 export interface AnalyticsLearnerListParams {

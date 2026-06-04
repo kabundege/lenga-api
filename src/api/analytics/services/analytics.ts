@@ -6,6 +6,7 @@
  */
 
 import type { Core } from '@strapi/strapi';
+import type { Knex } from 'knex';
 
 import {
   ANALYTICS_LINK_TABLES,
@@ -15,6 +16,7 @@ import {
   type AnalyticsLearnerListResult,
   type AnalyticsLearnerRow,
   type CompletedLessonSummary,
+  type LearnerListDemographics,
   type PassedAssessmentSummary,
 } from '../../../types/analytics-collections';
 
@@ -185,6 +187,86 @@ const learnerProfileGroupBy = [
   'ep.is_cooperative_member',
   'ep.cooperative_name',
 ] as const;
+
+const demographicSlice = (count: number, total: number) => ({
+  count,
+  percentage: total > 0 ? Number(((count / total) * 100).toFixed(1)) : 0,
+});
+
+const computeLearnerListDemographics = async (
+  baseQuery: () => Knex.QueryBuilder,
+): Promise<LearnerListDemographics> => {
+  const totalRow = (await baseQuery()
+    .countDistinct({ total: 'u.id' })
+    .first()) as DistinctCountRow | undefined;
+  const total = toNumber(totalRow?.total);
+
+  const genderRaw = await baseQuery()
+    .select('ep.gender')
+    .countDistinct({ count: 'u.id' })
+    .groupBy('ep.gender');
+
+  const pwdRaw = await baseQuery()
+    .select('ep.is_pwd')
+    .countDistinct({ count: 'u.id' })
+    .groupBy('ep.is_pwd');
+
+  const cooperativeRaw = await baseQuery()
+    .select('ep.is_cooperative_member')
+    .countDistinct({ count: 'u.id' })
+    .groupBy('ep.is_cooperative_member');
+
+  const districtRaw = await baseQuery()
+    .select('ep.district')
+    .countDistinct({ count: 'u.id' })
+    .groupBy('ep.district')
+    .orderBy('count', 'desc')
+    .limit(1);
+
+  const ageRows = (await baseQuery()
+    .select('u.id')
+    .max('ep.age as age')
+    .groupBy('u.id')) as Array<{ age: string | number | null }>;
+
+  const ages = ageRows
+    .map((row) => (row.age != null && row.age !== '' ? toNumber(row.age) : null))
+    .filter((age): age is number => age != null && age > 0);
+
+  const averageAge =
+    ages.length > 0
+      ? Number((ages.reduce((sum, age) => sum + age, 0) / ages.length).toFixed(1))
+      : null;
+
+  const femaleCount = genderRaw
+    .filter((row) => String(row.gender ?? '') === 'Female')
+    .reduce((sum, row) => sum + toNumber(row.count), 0);
+
+  const pwdCount = pwdRaw
+    .filter((row) => normalizeBoolean(row.is_pwd) === true)
+    .reduce((sum, row) => sum + toNumber(row.count), 0);
+
+  const cooperativeCount = cooperativeRaw
+    .filter((row) => normalizeBoolean(row.is_cooperative_member) === true)
+    .reduce((sum, row) => sum + toNumber(row.count), 0);
+
+  const topDistrictRow = districtRaw[0] as { district?: string | null; count?: string | number } | undefined;
+  const topDistrictCount = toNumber(topDistrictRow?.count);
+
+  return {
+    total,
+    average_age: averageAge,
+    female: demographicSlice(femaleCount, total),
+    pwd: demographicSlice(pwdCount, total),
+    cooperative: demographicSlice(cooperativeCount, total),
+    top_district:
+      topDistrictRow && topDistrictCount > 0
+        ? {
+            district: topDistrictRow.district != null ? String(topDistrictRow.district) : 'unknown',
+            ...demographicSlice(topDistrictCount, total),
+          }
+        : null,
+  };
+};
 
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   /**
@@ -600,11 +682,17 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       }
     }
 
+    const demographics =
+      filteredAssessment != null
+        ? await computeLearnerListDemographics(baseQuery)
+        : undefined;
+
     return {
       total,
       learners: rows.map((row) =>
         mapPassedLearnerRow(row, assessmentsByUser.get(toNumber(row.user_id)) ?? []),
       ),
+      demographics,
     };
   },
 
@@ -725,11 +813,17 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       }
     }
 
+    const demographics =
+      filteredLessonIds != null
+        ? await computeLearnerListDemographics(baseQuery)
+        : undefined;
+
     return {
       total,
       learners: rows.map((row) =>
         mapCompletedLearnerRow(row, lessonsByUser.get(toNumber(row.user_id)) ?? []),
       ),
+      demographics,
     };
   },
 
