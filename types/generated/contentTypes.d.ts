@@ -508,6 +508,7 @@ export interface ApiExtendedProfileExtendedProfile
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     district: Schema.Attribute.String;
+    full_name: Schema.Attribute.String;
     gender: Schema.Attribute.Enumeration<
       ['Male', 'Female', 'Other', 'PreferNotToSay']
     >;

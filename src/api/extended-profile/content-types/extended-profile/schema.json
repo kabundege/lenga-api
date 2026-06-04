@@ -19,6 +19,9 @@
       "required": true,
       "unique": true
     },
+    "full_name": {
+      "type": "string"
+    },
     "gender": {
       "type": "enumeration",
       "enum": ["Male", "Female", "Other", "PreferNotToSay"]

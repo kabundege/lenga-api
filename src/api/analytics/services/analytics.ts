@@ -14,6 +14,7 @@ import {
   type AnalyticsLearnerListParams,
   type AnalyticsLearnerListResult,
   type AnalyticsLearnerRow,
+  type CompletedLessonSummary,
 } from '../../../types/analytics-collections';
 
 type CountRow = { count: string | number | null };
@@ -67,10 +68,27 @@ const normalizePagination = (params: AnalyticsLearnerListParams = {}) => {
   return { limit, offset };
 };
 
-const mapLearnerRow = (
-  row: Record<string, unknown>,
-  countField: 'passed_count' | 'completed_lesson_count',
-): AnalyticsLearnerRow => ({
+const SYNTHETIC_EMAIL_SUFFIX = '@email.com';
+
+const deriveLearnerDisplayName = (
+  fullName: unknown,
+  email: unknown,
+  username: string,
+): string => {
+  const trimmedFull = fullName != null ? String(fullName).trim() : '';
+  if (trimmedFull) return trimmedFull;
+
+  const normalizedEmail = email != null ? String(email).trim().toLowerCase() : '';
+  if (normalizedEmail.endsWith(SYNTHETIC_EMAIL_SUFFIX)) {
+    const localPart = normalizedEmail.slice(0, -SYNTHETIC_EMAIL_SUFFIX.length);
+    const fromEmail = localPart.replace(/_/g, ' ').trim();
+    if (fromEmail) return fromEmail;
+  }
+
+  return username;
+};
+
+const mapLearnerProfileFields = (row: Record<string, unknown>) => ({
   user_id: toNumber(row.user_id),
   username: String(row.username ?? ''),
   gender: (row.gender as AnalyticsLearnerRow['gender']) ?? null,
@@ -80,12 +98,56 @@ const mapLearnerRow = (
   is_pwd: normalizeBoolean(row.is_pwd),
   is_cooperative_member: normalizeBoolean(row.is_cooperative_member),
   cooperative_name: row.cooperative_name != null ? String(row.cooperative_name) : null,
+});
+
+const mapLearnerRow = (
+  row: Record<string, unknown>,
+  countField: 'passed_count' | 'completed_lesson_count',
+): AnalyticsLearnerRow => ({
+  ...mapLearnerProfileFields(row),
   [countField]: toNumber(row[countField]),
 });
+
+const mapCompletedLearnerRow = (
+  row: Record<string, unknown>,
+  completedLessons: CompletedLessonSummary[],
+): AnalyticsLearnerRow => {
+  const profile = mapLearnerProfileFields(row);
+
+  return {
+    ...profile,
+    display_name: deriveLearnerDisplayName(row.full_name, row.email, profile.username),
+    completed_lessons: completedLessons,
+  };
+};
+
+const sortCompletedLessons = (lessons: CompletedLessonSummary[]): CompletedLessonSummary[] =>
+  [...lessons].sort((a, b) => {
+    const orderA = a.lesson_order ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.lesson_order ?? Number.MAX_SAFE_INTEGER;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.lesson_id - b.lesson_id;
+  });
 
 const learnerProfileSelect = [
   'u.id as user_id',
   'u.username',
+  'u.email',
+  'ep.full_name',
+  'ep.gender',
+  'ep.age',
+  'ep.district',
+  'ep.sector',
+  'ep.is_pwd',
+  'ep.is_cooperative_member',
+  'ep.cooperative_name',
+] as const;
+
+const learnerProfileGroupBy = [
+  'u.id',
+  'u.username',
+  'u.email',
+  'ep.full_name',
   'ep.gender',
   'ep.age',
   'ep.district',
@@ -359,17 +421,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const rows = await baseQuery()
       .select([...learnerProfileSelect])
       .select(knex.raw('COUNT(DISTINCT sub.id) as passed_count'))
-      .groupBy(
-        'u.id',
-        'u.username',
-        'ep.gender',
-        'ep.age',
-        'ep.district',
-        'ep.sector',
-        'ep.is_pwd',
-        'ep.is_cooperative_member',
-        'ep.cooperative_name',
-      )
+      .groupBy([...learnerProfileGroupBy])
       .orderBy('u.username', 'asc')
       .limit(limit)
       .offset(offset);
@@ -388,9 +440,27 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   ): Promise<AnalyticsLearnerListResult> {
     const knex = strapi.db.connection;
     const { limit, offset } = normalizePagination(params);
+    const lessonId = params.lesson_id;
+    const lessonOrder = params.lesson_order;
 
-    const baseQuery = () =>
-      knex(`${ANALYTICS_TABLES.moduleAttendances} as ma`)
+    const resolveFilteredLessonIds = async (): Promise<number[] | null> => {
+      if (lessonId == null) return null;
+
+      if (lessonOrder != null) {
+        const rows = await knex(ANALYTICS_TABLES.lessons)
+          .whereRaw('"order" = ?', [lessonOrder])
+          .select('id');
+        const ids = rows.map((row) => toNumber(row.id)).filter((id) => id > 0);
+        return ids.length > 0 ? ids : [lessonId];
+      }
+
+      return [lessonId];
+    };
+
+    const filteredLessonIds = await resolveFilteredLessonIds();
+
+    const baseQuery = () => {
+      let query = knex(`${ANALYTICS_TABLES.moduleAttendances} as ma`)
         .innerJoin(
           `${ANALYTICS_LINK_TABLES.moduleAttendanceUser} as mu`,
           'mu.module_attendance_id',
@@ -405,32 +475,85 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         .leftJoin(`${ANALYTICS_TABLES.extendedProfiles} as ep`, 'ep.id', 'epu.extended_profile_id')
         .where('ma.status', 'completed');
 
+      if (filteredLessonIds != null) {
+        query = query.whereExists(
+          knex(`${ANALYTICS_LINK_TABLES.moduleAttendanceLesson} as ml_filter`)
+            .select(knex.raw('1'))
+            .whereRaw('ml_filter.module_attendance_id = ma.id')
+            .whereIn('ml_filter.lesson_id', filteredLessonIds),
+        );
+      }
+
+      return query;
+    };
+
     const totalRow = (await baseQuery()
       .countDistinct({ total: 'u.id' })
       .first()) as DistinctCountRow | undefined;
     const total = toNumber(totalRow?.total);
 
-    const rows = await baseQuery()
+    const rows = (await baseQuery()
       .select([...learnerProfileSelect])
-      .select(knex.raw('COUNT(DISTINCT ma.id) as completed_lesson_count'))
-      .groupBy(
-        'u.id',
-        'u.username',
-        'ep.gender',
-        'ep.age',
-        'ep.district',
-        'ep.sector',
-        'ep.is_pwd',
-        'ep.is_cooperative_member',
-        'ep.cooperative_name',
-      )
+      .groupBy([...learnerProfileGroupBy])
       .orderBy('u.username', 'asc')
       .limit(limit)
-      .offset(offset);
+      .offset(offset)) as Record<string, unknown>[];
+
+    const userIds = rows.map((row) => toNumber(row.user_id));
+    const lessonsByUser = new Map<number, CompletedLessonSummary[]>();
+
+    if (userIds.length > 0) {
+      const lessonRows = await knex(`${ANALYTICS_TABLES.moduleAttendances} as ma`)
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.moduleAttendanceUser} as mu`,
+          'mu.module_attendance_id',
+          'ma.id',
+        )
+        .innerJoin(`${ANALYTICS_TABLES.users} as u`, 'u.id', 'mu.user_id')
+        .innerJoin(
+          `${ANALYTICS_LINK_TABLES.moduleAttendanceLesson} as ml`,
+          'ml.module_attendance_id',
+          'ma.id',
+        )
+        .innerJoin(`${ANALYTICS_TABLES.lessons} as l`, 'l.id', 'ml.lesson_id')
+        .where('ma.status', 'completed')
+        .whereIn('u.id', userIds)
+        .modify((qb) => {
+          if (filteredLessonIds != null) {
+            qb.whereIn('ml.lesson_id', filteredLessonIds);
+          }
+        })
+        .select(
+          'u.id as user_id',
+          'ml.lesson_id',
+          'l.title as lesson_title',
+          knex.raw('l."order" as lesson_order'),
+        )
+        .groupBy('u.id', 'ml.lesson_id', 'l.title', knex.raw('l."order"'));
+
+      for (const row of lessonRows) {
+        const userId = toNumber(row.user_id);
+        const lesson: CompletedLessonSummary = {
+          lesson_id: toNumber(row.lesson_id),
+          lesson_order: row.lesson_order != null && row.lesson_order !== '' ? toNumber(row.lesson_order) : null,
+          lesson_title: row.lesson_title != null ? String(row.lesson_title) : null,
+        };
+
+        const existing = lessonsByUser.get(userId) ?? [];
+        existing.push(lesson);
+        lessonsByUser.set(userId, existing);
+      }
+
+      for (const [userId, lessons] of lessonsByUser) {
+        lessonsByUser.set(userId, sortCompletedLessons(lessons));
+      }
+    }
 
     return {
       total,
-      learners: rows.map((row) => mapLearnerRow(row, 'completed_lesson_count')),
+      learners: rows.map((row) =>
+        mapCompletedLearnerRow(row, lessonsByUser.get(toNumber(row.user_id)) ?? []),
+      ),
     };
   },
 

@@ -47,7 +47,14 @@ export const ANALYTICS_EXPORT_TYPES: AnalyticsExportType[] = [
   'assessments',
 ];
 
+export interface CompletedLessonSummary {
+  lesson_id: number;
+  lesson_order: number | null;
+  lesson_title: string | null;
+}
+
 export interface ExtendedProfileAttributes {
+  full_name?: string | null;
   gender?: Gender | null;
   age?: number | null;
   is_pwd?: boolean;
@@ -73,6 +80,7 @@ export interface AssessmentSubmissionAttributes {
 export interface AnalyticsLearnerRow {
   user_id: number;
   username: string;
+  display_name?: string;
   gender: Gender | string | null;
   age: number | null;
   district: string | null;
@@ -82,6 +90,7 @@ export interface AnalyticsLearnerRow {
   cooperative_name: string | null;
   passed_count?: number;
   completed_lesson_count?: number;
+  completed_lessons?: CompletedLessonSummary[];
 }
 
 export interface AnalyticsLearnerListResult {
@@ -92,6 +101,10 @@ export interface AnalyticsLearnerListResult {
 export interface AnalyticsLearnerListParams {
   limit?: number;
   offset?: number;
+  /** When set, only learners who completed this lesson (module attendance). */
+  lesson_id?: number;
+  /** When set with lesson_id, matches any lesson row sharing this CMS order (duplicate lesson ids). */
+  lesson_order?: number;
 }
 
 /** Maps a numeric age to a bracket label for assessment demographic matrices. */

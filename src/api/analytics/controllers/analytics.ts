@@ -16,10 +16,30 @@ import {
 const isExportType = (value: string): value is AnalyticsExportType =>
   ANALYTICS_EXPORT_TYPES.includes(value as AnalyticsExportType);
 
-const parseLearnerListParams = (query: Record<string, unknown>) => ({
-  limit: query.limit != null ? Number(query.limit) : undefined,
-  offset: query.offset != null ? Number(query.offset) : undefined,
-});
+const normalizeQueryScalar = (value: unknown): string | undefined => {
+  if (value == null || value === '') return undefined;
+  if (Array.isArray(value)) return value[0] != null ? String(value[0]) : undefined;
+  return String(value);
+};
+
+const parseLearnerListParams = (query: Record<string, unknown>) => {
+  const rawLessonId = normalizeQueryScalar(query.lesson_id) ?? normalizeQueryScalar(query.lessonId);
+  const rawLessonOrder =
+    normalizeQueryScalar(query.lesson_order) ?? normalizeQueryScalar(query.lessonOrder);
+  const lessonId = rawLessonId != null ? Number(rawLessonId) : undefined;
+  const lessonOrder = rawLessonOrder != null ? Number(rawLessonOrder) : undefined;
+
+  return {
+    limit: query.limit != null ? Number(query.limit) : undefined,
+    offset: query.offset != null ? Number(query.offset) : undefined,
+    lesson_id:
+      lessonId != null && Number.isInteger(lessonId) && lessonId > 0 ? lessonId : undefined,
+    lesson_order:
+      lessonOrder != null && Number.isInteger(lessonOrder) && lessonOrder > 0
+        ? lessonOrder
+        : undefined,
+  };
+};
 
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   /**
