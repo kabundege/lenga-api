@@ -108,12 +108,13 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
           DEPLOY_DOCKER_RUN_EXTRA_ARGS: ${{ vars.DEPLOY_DOCKER_RUN_EXTRA_ARGS }}
+          BACKUP_ROOT: ${{ vars.BACKUP_ROOT || '~/lenga-backups' }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           username: ${{ secrets.DEPLOY_USER }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
-          envs: DOCKERHUB_USERNAME,DOCKERHUB_PASSWORD,IMAGE_NAME,IMAGE_TAG,CONTAINER_NAME,DEPLOY_DOCKER_RUN_EXTRA_ARGS
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_PASSWORD,IMAGE_NAME,IMAGE_TAG,CONTAINER_NAME,DEPLOY_DOCKER_RUN_EXTRA_ARGS,BACKUP_ROOT
           script: |
             set -euo pipefail
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -122,11 +123,55 @@ jobs:
             # Remember the currently running image so we can keep it for rollback
             PREV_IMAGE=$(docker inspect --format='{{.Config.Image}}' "$CONTAINER_NAME" 2>/dev/null || true)
 
+            BACKUP_DIR=""
+            if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+              BACKUP_ROOT="${BACKUP_ROOT:-$HOME/lenga-backups}"
+              TS=$(date +%Y%m%d-%H%M%S)
+              BACKUP_DIR="$BACKUP_ROOT/$TS"
+              mkdir -p "$BACKUP_DIR"
+
+              docker run --rm \
+                -v lenga-data:/data:ro \
+                -v "$BACKUP_DIR":/backup \
+                alpine cp /data/data.db /backup/data.db
+
+              docker exec "$CONTAINER_NAME" tar czf /tmp/uploads.tar.gz -C /app/public uploads
+              docker cp "$CONTAINER_NAME:/tmp/uploads.tar.gz" "$BACKUP_DIR/uploads.tar.gz"
+              docker exec "$CONTAINER_NAME" rm -f /tmp/uploads.tar.gz
+
+              test -s "$BACKUP_DIR/data.db"
+              test -s "$BACKUP_DIR/uploads.tar.gz"
+              echo "Backup: $BACKUP_DIR"
+            else
+              echo "No existing container; skipping pre-deploy backup"
+            fi
+
             docker stop "$CONTAINER_NAME" 2>/dev/null || true
             docker rm "$CONTAINER_NAME" 2>/dev/null || true
             docker run -d --name "$CONTAINER_NAME" -p 1337:1337 --restart unless-stopped \
               -v lenga-data:/app/.tmp \
               ${DEPLOY_DOCKER_RUN_EXTRA_ARGS:-} "${IMAGE_NAME}:${IMAGE_TAG}"
+
+            if [ -n "$BACKUP_DIR" ] && [ -f "$BACKUP_DIR/uploads.tar.gz" ]; then
+              docker cp "$BACKUP_DIR/uploads.tar.gz" "$CONTAINER_NAME:/tmp/uploads.tar.gz"
+              docker exec "$CONTAINER_NAME" sh -c 'mkdir -p /app/public && tar xzf /tmp/uploads.tar.gz -C /app/public'
+              docker exec "$CONTAINER_NAME" rm -f /tmp/uploads.tar.gz
+
+              docker exec "$CONTAINER_NAME" test -d /app/public/uploads
+              docker exec "$CONTAINER_NAME" sh -c 'test "$(ls -A /app/public/uploads 2>/dev/null | wc -l)" -gt 0'
+
+              if ! docker run --rm -v lenga-data:/data:ro alpine test -s /data/data.db; then
+                docker run --rm \
+                  -v lenga-data:/data \
+                  -v "$BACKUP_DIR":/backup:ro \
+                  alpine cp /backup/data.db /data/data.db
+                docker restart "$CONTAINER_NAME"
+              fi
+
+              docker exec "$CONTAINER_NAME" ls -la /app/.tmp/data.db
+              docker exec "$CONTAINER_NAME" ls /app/public/uploads | head -5
+              echo "Deploy complete; backup at $BACKUP_DIR"
+            fi
 
             # Clean up old images for this repo, keeping only the newly deployed
             # image and the previous one (for rollback)
