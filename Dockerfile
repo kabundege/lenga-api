@@ -1,5 +1,7 @@
 FROM node:20
 
+RUN corepack enable
+
 WORKDIR /app
 
 # Strapi loads these during `strapi build`; .dockerignore omits `.env`, so defaults
@@ -20,14 +22,14 @@ ENV APP_KEYS=${APP_KEYS} \
     DATABASE_CLIENT=${DATABASE_CLIENT}
 
 # Install dependencies first for better build caching
-COPY package*.json ./
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy application source
 COPY . .
 
 # Build Strapi admin panel
-RUN npm run build
+RUN pnpm run build
 
 ENV NODE_ENV=production
 
@@ -35,4 +37,4 @@ VOLUME /app/.tmp
 
 EXPOSE 1337
 
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "run", "start"]
