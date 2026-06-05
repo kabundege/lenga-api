@@ -111,7 +111,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
           DEPLOY_DOCKER_RUN_EXTRA_ARGS: ${{ vars.DEPLOY_DOCKER_RUN_EXTRA_ARGS }}
-          BACKUP_ROOT: ${{ vars.BACKUP_ROOT || '~/lenga-backups' }}
+          BACKUP_ROOT: ${{ vars.BACKUP_ROOT }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -129,6 +129,7 @@ jobs:
             BACKUP_DIR=""
             if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
               BACKUP_ROOT="${BACKUP_ROOT:-$HOME/lenga-backups}"
+              BACKUP_ROOT="${BACKUP_ROOT/#\~/$HOME}"
               TS=$(date +%Y%m%d-%H%M%S)
               BACKUP_DIR="$BACKUP_ROOT/$TS"
               mkdir -p "$BACKUP_DIR"
