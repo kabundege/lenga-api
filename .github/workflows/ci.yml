@@ -173,7 +173,7 @@ jobs:
               fi
 
               docker exec "$CONTAINER_NAME" ls -la /app/.tmp/data.db
-              docker exec "$CONTAINER_NAME" ls /app/public/uploads | head -5
+              docker exec "$CONTAINER_NAME" sh -c 'ls /app/public/uploads 2>/dev/null | head -5' || true
               echo "Deploy complete; backup at $BACKUP_DIR"
             fi
 
